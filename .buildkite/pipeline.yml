@@ -1,0 +1,63 @@
+steps:
+  # Step 1 - Install dependencies from requirements.txt
+  - label: ":package: Install dependencies"
+    key: "install"
+    command: "pip install -r requirements.txt --quiet"
+    agents:
+      queue: test-buildkite
+
+  # Step 2 - Lint: checks for Python syntax errors
+  # py_compile is built into Python - no install needed
+  - label: ":magnifying_glass: Lint"
+    key: "lint"
+    depends_on: "install"        # waits for install to finish first
+    command: "python -m py_compile app.py && echo 'Lint passed!'"
+    agents:
+      queue: test-buildkite
+
+  # Step 3 - Run all test_ functions in test_app.py
+  # -v means verbose (shows each test name)
+  - label: ":test_tube: Run tests"
+    key: "tests"
+    depends_on: "install"        # also waits for install
+    command: "python -m pytest test_app.py -v"
+    agents:
+      queue: test-buildkite
+
+  # Wait here - lint AND tests must both pass before deploy
+  - wait
+
+  # Step 4 - Deploy: kill any old Flask process, start a fresh one
+  - label: ":rocket: Deploy Flask app"
+    key: "deploy"
+    command: |
+      echo "Stopping any existing Flask app..."
+      taskkill /F /IM python.exe /T 2>nul || true
+
+      echo "Starting Flask app..."
+      start /B python app.py
+
+      echo "Waiting for app to start..."
+      timeout /t 3 /nobreak > nul
+
+      echo "App deployed! Visit http://localhost:5000"
+    agents:
+      queue: test-buildkite
+
+  # Step 5 - Health check: hits /health to confirm app is actually running
+  - label: ":white_check_mark: Health check"
+    key: "health"
+    depends_on: "deploy"
+    command: |
+      python -c "
+      import urllib.request, sys, time
+      time.sleep(2)
+      try:
+          r = urllib.request.urlopen('http://localhost:5000/health')
+          print('Health check passed:', r.read().decode())
+      except Exception as e:
+          print('Health check failed:', e)
+          sys.exit(1)
+      "
+    agents:
+      queue: test-buildkite
