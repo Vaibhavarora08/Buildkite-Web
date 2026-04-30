@@ -33,14 +33,17 @@ steps:
     command: |
       echo Stopping any existing Flask app...
       taskkill /F /IM python.exe /T 2>nul
+      if %ERRORLEVEL% NEQ 0 echo No existing Flask process found, continuing...
       echo Starting Flask app...
-      cd %BUILDKITE_BUILD_CHECKOUT_PATH%
+      cd /d %BUILDKITE_BUILD_CHECKOUT_PATH%
       start /B python app.py > flask.log 2>&1
       timeout /t 3 /nobreak > nul
       echo Flask app deployed!
       echo Visit http://127.0.0.1:5000
+      exit /b 0
     agents:
       queue: test-buildkite
+   
 
   # Step 5 - Health check: hits /health to confirm app is actually running
   - label: ":white_check_mark: Health check"
