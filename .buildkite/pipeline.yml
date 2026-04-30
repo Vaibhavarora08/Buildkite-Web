@@ -31,16 +31,9 @@ steps:
   - label: ":rocket: Deploy Flask app"
     key: "deploy"
     command: |
-      echo Stopping any existing Flask app...
-      taskkill /F /IM python.exe /T 2>nul
-      if %ERRORLEVEL% NEQ 0 echo No existing Flask process found, continuing...
-      echo Starting Flask app...
-      cd /d %BUILDKITE_BUILD_CHECKOUT_PATH%
-      start /B python app.py > flask.log 2>&1
-      timeout /t 3 /nobreak > nul
-      echo Flask app deployed!
-      echo Visit http://127.0.0.1:5000
-      exit /b 0
+      echo Hello from deploy step
+      echo Build path is %BUILDKITE_BUILD_CHECKOUT_PATH%
+      dir %BUILDKITE_BUILD_CHECKOUT_PATH%
     agents:
       queue: test-buildkite
    
